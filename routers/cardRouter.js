@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
 import Card from "../models/cardModel.js";
-
+import cardDesigns from "../constants/cardDesigns.js";
 import { authenticateToken } from "../utils/jwt.js";
 
 const router = express.Router();
@@ -12,7 +12,7 @@ router.post("/new-card", authenticateToken, async (req, res) => {
   try {
     const userId = req.data.user;
     const date = new Date();
-    const { cardName, holderName, year, bgColor, color, cardType } = req.body;
+    const { cardName, holderName, year, cardType, cardDesign } = req.body;
 
     const cvc = Math.floor(Math.random() * 999);
     let cardNumber = 1234;
@@ -32,11 +32,10 @@ router.post("/new-card", authenticateToken, async (req, res) => {
       cardName,
       holderName,
       validThru,
-      bgColor,
-      color,
       cardType,
       cvc,
       cardNumber,
+      ...cardDesigns[cardDesign],
     });
 
     return res.status(200).json({ message: "Kart hesabınıza əlavə olundu" });
@@ -49,7 +48,7 @@ router.get("/get", authenticateToken, async (req, res) => {
   try {
     const userId = req.data.user;
 
-    const cards = await Card.find({ userId });
+    const cards = await Card.find({ userId }, "-_id -userId -__v");
 
     return res.status(200).json({ data: cards });
   } catch (err) {

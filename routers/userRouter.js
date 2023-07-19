@@ -97,7 +97,7 @@ router.get("/infoes", authenticateToken, async (req, res) => {
 
     const user = await User.findOne(
       { _id: userId },
-      "-_id totalBalance incomeCategories outcomeCategories"
+      "-_id -transactionsHistory -password -__v -createdAt -updatedAt"
     );
 
     return res.status(200).json({ data: user });

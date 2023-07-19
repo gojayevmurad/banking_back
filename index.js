@@ -13,7 +13,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 app.use("/api/user", userRouter);
-app.use("/api/card", cardRouter);
+app.use("/api/cards", cardRouter);
 app.use("/api/transaction", transactionRouter);
 
 app.listen(process.env.PORT, () => {

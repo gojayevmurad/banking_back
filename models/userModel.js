@@ -20,7 +20,7 @@ const transactionsHistoryItemSchema = mongoose.Schema({
   },
 });
 
-const categoriesItem = mongoose.Schema({
+const earningCategoriesItem = mongoose.Schema({
   categoryName: {
     type: String,
     required: true,
@@ -28,6 +28,29 @@ const categoriesItem = mongoose.Schema({
   amount: {
     type: Number,
     default: 0,
+  },
+  color: {
+    type: String,
+    enum: ["blue", "orange", "red", "purple"],
+  },
+  target: {
+    type: Number,
+    required: true,
+  },
+});
+
+const expenseCategoriesItem = mongoose.Schema({
+  categoryName: {
+    type: String,
+    required: true,
+  },
+  amount: {
+    type: Number,
+    default: 0,
+  },
+  color: {
+    type: String,
+    enum: ["blue", "orange", "red", "purple"],
   },
 });
 
@@ -53,8 +76,8 @@ const userSchema = mongoose.Schema(
       type: Number,
       default: 0,
     },
-    incomeCategories: [categoriesItem],
-    outcomeCategories: [categoriesItem],
+    incomeCategories: [earningCategoriesItem],
+    outcomeCategories: [expenseCategoriesItem],
     transactionsHistory: [transactionsHistoryItemSchema],
   },
   { timestamps: true }

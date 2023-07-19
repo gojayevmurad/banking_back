@@ -5,6 +5,7 @@ const singleTransaction = new mongoose.Schema({
   amount: { type: Number, required: true },
   date: { type: Date, default: () => Date.now() },
   isRecieve: { type: Boolean, default: false },
+  title: { type: String, required: true },
 });
 
 const transactionModel = mongoose.Schema({
