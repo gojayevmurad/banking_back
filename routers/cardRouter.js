@@ -38,7 +38,11 @@ router.post("/new-card", authenticateToken, async (req, res) => {
       ...cardDesigns[cardDesign],
     });
 
-    return res.status(200).json({ message: "Kart hesabınıza əlavə olundu" });
+    const cards = await Card.find({ userId }, "-userId -__v");
+
+    return res
+      .status(200)
+      .json({ data: cards, message: "Kart hesabınıza əlavə olundu" });
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
@@ -48,9 +52,28 @@ router.get("/get", authenticateToken, async (req, res) => {
   try {
     const userId = req.data.user;
 
-    const cards = await Card.find({ userId }, "-_id -userId -__v");
+    const cards = await Card.find({ userId }, "-userId -__v");
 
     return res.status(200).json({ data: cards });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+});
+
+router.put("/change-status/:id", authenticateToken, async (req, res) => {
+  try {
+    const cardId = req.params.id;
+    const userId = req.data.user;
+
+    const currentCard = await Card.findOne({ _id: cardId }, "status");
+    currentCard.status = !currentCard.status;
+    await currentCard.save();
+
+    const cardList = await Card.find({ userId }, "-userId -__v");
+
+    return res
+      .status(200)
+      .json({ message: "Uğurlu əməliyyat", data: cardList });
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
