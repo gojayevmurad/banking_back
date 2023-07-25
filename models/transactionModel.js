@@ -6,6 +6,10 @@ const singleTransaction = new mongoose.Schema({
   date: { type: Date, default: () => Date.now() },
   isRecieve: { type: Boolean, default: false },
   title: { type: String, required: true },
+  transactionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+  },
 });
 
 const transactionModel = mongoose.Schema({

@@ -6,7 +6,7 @@ const transactionsHistoryItemSchema = mongoose.Schema({
     required: true,
   },
   status: {
-    type: Boolean || String,
+    type: mongoose.Schema.Types.Mixed,
     enum: ["Pending", true, false],
     required: true,
   },
@@ -17,6 +17,14 @@ const transactionsHistoryItemSchema = mongoose.Schema({
   date: {
     type: Date,
     default: () => Date.now(),
+  },
+  title: {
+    type: String,
+    required: true,
+  },
+  transactionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
   },
 });
 
@@ -54,6 +62,21 @@ const expenseCategoriesItem = mongoose.Schema({
   },
 });
 
+const contactItem = mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+  },
+  date: {
+    type: Date,
+    default: () => Date.now(),
+  },
+  contactPop: {
+    type: Number,
+    default: 0,
+  },
+});
+
 const userSchema = mongoose.Schema(
   {
     name: {
@@ -76,6 +99,7 @@ const userSchema = mongoose.Schema(
       type: Number,
       default: 0,
     },
+    contacts: [contactItem],
     incomeCategories: [earningCategoriesItem],
     outcomeCategories: [expenseCategoriesItem],
     transactionsHistory: [transactionsHistoryItemSchema],

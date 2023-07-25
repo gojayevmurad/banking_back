@@ -1,6 +1,4 @@
 import express from "express";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 
 import Card from "../models/cardModel.js";
 import cardDesigns from "../constants/cardDesigns.js";
