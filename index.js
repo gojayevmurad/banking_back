@@ -3,14 +3,13 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cors from "cors";
 import http from "http";
-import { Server } from "socket.io";
 
 //Route
 import userRouter from "./routers/userRouter.js";
 import cardRouter from "./routers/cardRouter.js";
 import transactionRouter from "./routers/transactionRouter.js";
 import contactsRouter from "./routers/contactsRouter.js";
-import { authenticateToken, authenticateTokenSocket } from "./utils/jwt.js";
+import { initializeSocketIO } from "./socketHandler.js";
 
 dotenv.config();
 
@@ -24,38 +23,7 @@ app.use("/api/contacts", contactsRouter);
 
 const server = http.createServer(app);
 
-const io = new Server(server, {
-  cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"],
-  },
-});
-
-io.use((socket, next) => {
-  try {
-    const token = socket.handshake.auth.token;
-
-    const { user: userId } = authenticateTokenSocket(token);
-    socket.userId = userId;
-
-    next();
-  } catch (err) {
-    return next(new Error("Authentication failed."));
-  }
-});
-
-io.on("connection", (socket) => {
-  socket.join(socket.userId);
-
-  socket.on("send_message", (data) => {
-    const { message, recepientId } = data;
-
-    io.to(recepientId).emit("receive_message", {
-      message,
-      userId: socket.userId,
-    });
-  });
-});
+initializeSocketIO(server);
 
 server.listen(process.env.PORT, () => {
   mongoose
