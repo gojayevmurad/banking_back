@@ -17,6 +17,11 @@ export function authenticateToken(req, res, next) {
   });
 }
 
+export function authenticateTokenSocket(token) {
+  const decoded = jwt.verify(token, process.env.SECRET_KEY);
+  return decoded;
+}
+
 export function refreshToken(req, res, next) {
   const token = req.headers.authorization.split(" ")[1];
 
@@ -29,4 +34,3 @@ export function refreshToken(req, res, next) {
     next();
   });
 }
-

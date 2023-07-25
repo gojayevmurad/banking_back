@@ -10,6 +10,7 @@ import userRouter from "./routers/userRouter.js";
 import cardRouter from "./routers/cardRouter.js";
 import transactionRouter from "./routers/transactionRouter.js";
 import contactsRouter from "./routers/contactsRouter.js";
+import { authenticateToken, authenticateTokenSocket } from "./utils/jwt.js";
 
 dotenv.config();
 
@@ -23,18 +24,40 @@ app.use("/api/contacts", contactsRouter);
 
 const server = http.createServer(app);
 
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"],
+  },
+});
+
+io.use((socket, next) => {
+  try {
+    const token = socket.handshake.auth.token;
+
+    const { user: userId } = authenticateTokenSocket(token);
+    socket.userId = userId;
+
+    next();
+  } catch (err) {
+    return next(new Error("Authentication failed."));
+  }
+});
 
 io.on("connection", (socket) => {
-  socket.on("chat", (data) => {
-    io.sockets.emit("chat", data);
-  });
-  socket.on("typing", (data) => {
-    socket.broadcast.emit("typing", data);
+  socket.join(socket.userId);
+
+  socket.on("send_message", (data) => {
+    const { message, recepientId } = data;
+
+    io.to(recepientId).emit("receive_message", {
+      message,
+      userId: socket.userId,
+    });
   });
 });
 
-app.listen(process.env.PORT, () => {
+server.listen(process.env.PORT, () => {
   mongoose
     .connect(process.env.DB_CONNECTION_STRING)
     .then(() => console.log("Connected to MongoDB"))
