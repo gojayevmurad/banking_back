@@ -7,13 +7,14 @@ import Card from "../models/cardModel.js";
 
 import { getLastWeekDates } from "../utils/date.js";
 import { authenticateToken } from "../utils/jwt.js";
+import categoryModel from "../models/categoryModel.js";
 
 const router = express.Router();
 
 // outcome
 router.post("/send", authenticateToken, async (req, res) => {
   try {
-    const { amount, userId, title, cardId } = req.body;
+    const { amount, userId, title, cardId, categoryId } = req.body;
     const senderId = req.data.user;
 
     const card = await Card.findOne({ _id: cardId });
@@ -36,6 +37,7 @@ router.post("/send", authenticateToken, async (req, res) => {
       status: "Pending",
       title,
       transactionId,
+      categoryId,
     });
 
     await sender.save();
@@ -156,11 +158,19 @@ router.put("/accept/:id", authenticateToken, async (req, res) => {
           { _id: item.sender },
           "transactionsHistory"
         );
-        sender.transactionsHistory.forEach((transaction) => {
+        sender.transactionsHistory.forEach(async (transaction) => {
           if (
             transaction.transactionId.toString() ==
             item.transactionId.toString()
           ) {
+            if (transaction.categoryId != "null") {
+              const categoryItem = await categoryModel.findOne({
+                _id: transaction.categoryId,
+              });
+              categoryItem.amount += item.amount;
+              await categoryItem.save();
+            }
+
             transaction.status = true;
           }
         });
@@ -186,7 +196,7 @@ router.put("/accept/:id", authenticateToken, async (req, res) => {
 
     return res.status(200).json({ message: "Qəbul edildi" });
   } catch (err) {
-    return res.status(200).json({ message: err.message });
+    return res.status(500).json({ message: err.message });
   }
 });
 
@@ -195,7 +205,7 @@ router.get("/get-pendings", authenticateToken, async (req, res) => {
     const userId = req.data.user;
 
     const history = await transactionModel.findOne({ userId }, "-_id");
-    
+
     if (!history || !history.transactions.length)
       return res.status(200).json({ data: [] });
 
@@ -295,6 +305,14 @@ router.get("/last-week", authenticateToken, async (req, res) => {
     return res.status(200).json({
       data: { weeklyIncome, weeklyExpense },
     });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+});
+
+router.get("/last-transactions", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.data.user;
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }

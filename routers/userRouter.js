@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/userModel.js";
 
 import { authenticateToken } from "../utils/jwt.js";
+import cardModel from "../models/cardModel.js";
 
 const router = express.Router();
 
@@ -97,10 +98,16 @@ router.get("/infoes", authenticateToken, async (req, res) => {
 
     const user = await User.findOne(
       { _id: userId },
-      "-_id -transactionsHistory -password -__v -createdAt -updatedAt"
+      "-_id -transactionsHistory -password -__v -createdAt -updatedAt -contacts"
     );
 
-    return res.status(200).json({ data: user });
+    const cardsList = await cardModel.find({ userId }, "cardBalance -_id");
+    const totalBalance = cardsList.reduce(
+      (accumulator, currentCard) => accumulator + currentCard.cardBalance,
+      0
+    );
+    console.log(user);
+    return res.status(200).json({ data: { ...user._doc, totalBalance } });
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }

@@ -26,6 +26,9 @@ const transactionsHistoryItemSchema = mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     required: true,
   },
+  categoryId: {
+    type: String,
+  },
 });
 
 const earningCategoriesItem = mongoose.Schema({

@@ -21,6 +21,10 @@ const categorySchema = mongoose.Schema({
     type: Number,
     default: 0,
   },
+  color: {
+    type: String,
+    enum: ["orange", "purple", "blue", "red"],
+  },
 });
 
 export default mongoose.model("Category", categorySchema);
