@@ -106,7 +106,6 @@ router.get("/infoes", authenticateToken, async (req, res) => {
       (accumulator, currentCard) => accumulator + currentCard.cardBalance,
       0
     );
-    console.log(user);
     return res.status(200).json({ data: { ...user._doc, totalBalance } });
   } catch (err) {
     return res.status(500).json({ message: err.message });

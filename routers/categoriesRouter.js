@@ -10,7 +10,7 @@ const router = express.Router();
 router.post("/create", authenticateToken, async (req, res) => {
   try {
     const userId = req.data.user;
-    const { categoryName, isIncome, target } = req.body;
+    const { categoryName, isIncome, target, color } = req.body;
 
     if (isIncome) {
       await categoryModel.create({
@@ -18,12 +18,14 @@ router.post("/create", authenticateToken, async (req, res) => {
         categoryName,
         isIncome,
         target,
+        color,
       });
     } else {
       await categoryModel.create({
         userId,
         categoryName,
         isIncome,
+        color,
       });
     }
 
