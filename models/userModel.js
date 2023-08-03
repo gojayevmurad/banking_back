@@ -29,6 +29,10 @@ const transactionsHistoryItemSchema = mongoose.Schema({
   categoryId: {
     type: String,
   },
+  fromCard: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+  },
 });
 
 const earningCategoriesItem = mongoose.Schema({

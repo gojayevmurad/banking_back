@@ -8,6 +8,7 @@ import Card from "../models/cardModel.js";
 import { getLastWeekDates } from "../utils/date.js";
 import { authenticateToken } from "../utils/jwt.js";
 import categoryModel from "../models/categoryModel.js";
+import cardModel from "../models/cardModel.js";
 
 const router = express.Router();
 
@@ -38,6 +39,7 @@ router.post("/send", authenticateToken, async (req, res) => {
       title,
       transactionId,
       categoryId,
+      fromCard: cardId,
     });
 
     await sender.save();
@@ -50,6 +52,7 @@ router.post("/send", authenticateToken, async (req, res) => {
         sender: senderId,
         title,
         transactionId,
+        fromCard: cardId,
       });
       await modelExist.save();
 
@@ -58,7 +61,9 @@ router.post("/send", authenticateToken, async (req, res) => {
 
     await transactionModel.create({
       userId,
-      transactions: [{ amount, sender: senderId, title, transactionId }],
+      transactions: [
+        { amount, sender: senderId, title, transactionId, fromCard: cardId },
+      ],
     });
 
     return res.status(200).json({ message: "Uğurlu əməliyyat" });
@@ -136,10 +141,11 @@ router.get("/get-history", authenticateToken, async (req, res) => {
 
 // accept transaction
 
-router.put("/accept/:id", authenticateToken, async (req, res) => {
+router.put("/accept/:id/:cardId", authenticateToken, async (req, res) => {
   try {
     const userId = req.data.user;
     const transactionId = req.params.id;
+    const cardId = req.params.cardId;
 
     const transactionsList = await transactionModel.findOne(
       { userId },
@@ -149,6 +155,7 @@ router.put("/accept/:id", authenticateToken, async (req, res) => {
       { _id: userId },
       "transactionsHistory"
     );
+    const card = await cardModel.findOne({ _id: cardId });
 
     for (let i = 0; i < transactionsList.transactions.length; i++) {
       let item = transactionsList.transactions[i];
@@ -158,7 +165,10 @@ router.put("/accept/:id", authenticateToken, async (req, res) => {
           { _id: item.sender },
           "transactionsHistory"
         );
-        sender.transactionsHistory.forEach(async (transaction) => {
+        card.cardBalance += Math.abs(item.amount);
+
+        for (let i = 0; i < sender.transactionsHistory.length; i++) {
+          const transaction = sender.transactionsHistory[i];
           if (
             transaction.transactionId.toString() ==
             item.transactionId.toString()
@@ -170,10 +180,9 @@ router.put("/accept/:id", authenticateToken, async (req, res) => {
               categoryItem.amount += item.amount;
               await categoryItem.save();
             }
-
             transaction.status = true;
           }
-        });
+        }
         await sender.save();
         //#endregion
 
@@ -184,6 +193,7 @@ router.put("/accept/:id", authenticateToken, async (req, res) => {
           status: true,
           title: item.title,
           transactionId,
+          fromCard: item.fromCard,
         });
 
         transactionsList.transactions.splice(i, 1);
@@ -193,9 +203,76 @@ router.put("/accept/:id", authenticateToken, async (req, res) => {
 
     await transactionsList.save();
     await user.save();
+    await card.save();
 
     return res.status(200).json({ message: "Qəbul edildi" });
   } catch (err) {
+    console.log(err);
+    return res.status(500).json({ message: err.message });
+  }
+});
+
+router.put("/reject/:id", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.data.user;
+    const transactionId = req.params.id;
+    let senderId;
+
+    const transactionsList = await transactionModel.findOne(
+      { userId },
+      "transactions"
+    );
+
+    const user = await userModel.findOne(
+      { _id: userId },
+      "transactionsHistory"
+    );
+
+    for (let i = 0; i < transactionsList.transactions.length; i++) {
+      const item = transactionsList.transactions[i];
+      if (item._id.toString() == transactionId) {
+        senderId = item.sender;
+
+        const sender = await userModel.findOne(
+          { _id: senderId },
+          "transactionsHistory"
+        );
+
+        for (let i = 0; i < sender.transactionsHistory.length; i++) {
+          const transactionItem = sender.transactionsHistory[i];
+          if (
+            transactionItem.transactionId.toString() ==
+            item.transactionId.toString()
+          ) {
+            transactionItem.status = false;
+            const card = await cardModel.findOne({
+              _id: transactionItem.fromCard,
+            });
+            card.cardBalance += Math.abs(transactionItem.amount);
+            await card.save();
+          }
+        }
+
+        user.transactionsHistory.unshift({
+          userId: item.sender,
+          amount: item.amount,
+          status: false,
+          title: item.title,
+          transactionId,
+          fromCard: item.fromCard,
+        });
+
+        await sender.save();
+        transactionsList.transactions.splice(i, 1);
+      }
+    }
+
+    await user.save();
+    await transactionsList.save();
+
+    return res.status(200).json({ message: "İmtina edildi" });
+  } catch (err) {
+    console.log(err);
     return res.status(500).json({ message: err.message });
   }
 });

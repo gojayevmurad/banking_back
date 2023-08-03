@@ -10,6 +10,10 @@ const singleTransaction = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     required: true,
   },
+  fromCard: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+  },
 });
 
 const transactionModel = mongoose.Schema({
