@@ -63,8 +63,29 @@ router.put("/change-status/:id", authenticateToken, async (req, res) => {
     const cardId = req.params.id;
     const userId = req.data.user;
 
-    const currentCard = await Card.findOne({ _id: cardId }, "status");
+    const currentCard = await Card.findOne({ _id: cardId, userId }, "status");
     currentCard.status = !currentCard.status;
+    await currentCard.save();
+
+    const cardList = await Card.find({ userId }, "-userId -__v");
+
+    return res
+      .status(200)
+      .json({ message: "Uğurlu əməliyyat", data: cardList });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+});
+
+router.put("/change-limit/:id", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.data.user;
+    const cardId = req.params.id;
+
+    const currentCard = await Card.findOne({ _id: cardId, userId });
+
+    currentCard.limit.isActive = !currentCard.limit.isActive;
+
     await currentCard.save();
 
     const cardList = await Card.find({ userId }, "-userId -__v");

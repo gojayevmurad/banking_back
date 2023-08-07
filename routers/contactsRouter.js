@@ -21,7 +21,7 @@ router.get("/get-contacts", authenticateToken, async (req, res) => {
       {
         _id: { $in: contactsId },
       },
-      "name surname email"
+      "name surname email profile_photo "
     );
 
     return res.status(200).json({ data: contacts });
@@ -43,7 +43,7 @@ router.get("/get-pendings", authenticateToken, async (req, res) => {
 
     const pendingUsers = await UserModel.find(
       { _id: { $in: idList } },
-      "name surname email"
+      "name surname email profile_photo"
     );
 
     return res.status(200).json({ data: pendingUsers });
@@ -61,7 +61,7 @@ router.post("/send-request", authenticateToken, async (req, res) => {
       { _id: userId },
       "contacts email"
     );
-    if (userProfile.email == email) {
+    if (userProfile.email === email) {
       return res
         .status(400)
         .json({ message: "Öz emailinizi daxil edə bilməzsiniz" });
@@ -74,7 +74,7 @@ router.post("/send-request", authenticateToken, async (req, res) => {
     }
 
     const isFriend = userProfile.contacts.some(
-      (item) => item.userId.toString() == recipientUser._id.toString()
+      (item) => item.userId.toString() === recipientUser._id.toString()
     );
 
     if (isFriend) {
@@ -130,7 +130,7 @@ router.post("/send-request", authenticateToken, async (req, res) => {
 
     const pendingUsers = await UserModel.find(
       { _id: { $in: idList } },
-      "name surname email"
+      "name surname email profile_photo"
     );
     //#endregion get pendings
 
@@ -146,7 +146,7 @@ router.post("/send-request", authenticateToken, async (req, res) => {
       {
         _id: { $in: contactsId },
       },
-      "name surname email"
+      "name surname email profile_photo"
     );
     //#endregion get contacts
 
@@ -200,7 +200,7 @@ router.put("/accept/:id", authenticateToken, async (req, res) => {
       {
         _id: { $in: contactsId },
       },
-      "name surname email"
+      "name surname email profile_photo"
     );
     //#endregion get contacts
     const pendings = await ContactModel.find(
@@ -212,7 +212,7 @@ router.put("/accept/:id", authenticateToken, async (req, res) => {
 
     const pendingUsers = await UserModel.find(
       { _id: { $in: idList } },
-      "name surname email"
+      "name surname email profile_photo"
     );
 
     return res.status(200).json({ data: contacts, pendings: pendingUsers });
@@ -249,7 +249,7 @@ router.delete("/reject/:id", authenticateToken, async (req, res) => {
       {
         _id: { $in: contactsId },
       },
-      "name surname email"
+      "name surname email profile_photo"
     );
     //#endregion get contacts
     //#region get pendings
@@ -262,7 +262,7 @@ router.delete("/reject/:id", authenticateToken, async (req, res) => {
 
     const pendingUsers = await UserModel.find(
       { _id: { $in: idList } },
-      "name surname email"
+      "name surname email profile_photo"
     );
     //#endregion get pendings
 

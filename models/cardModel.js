@@ -53,6 +53,7 @@ const cardSchema = mongoose.Schema({
   limit: {
     isActive: { type: Boolean, default: false },
     amount: { type: Number, default: 0 },
+    target: { type: Number, default: 100 },
   },
 });
 

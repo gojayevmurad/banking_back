@@ -2,9 +2,10 @@ import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-import User from "../models/userModel.js";
-
 import { authenticateToken } from "../utils/jwt.js";
+import { cloudinary } from "../utils/cloudinary.js";
+
+import User from "../models/userModel.js";
 import cardModel from "../models/cardModel.js";
 
 const router = express.Router();
@@ -21,11 +22,17 @@ router.post("/register", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // const imageUploadResult = await cloudinary.uploader.upload(image, {
+    //   folder: "profile_photos",
+    // });
+
     await User.create({
       name,
       surname,
       email,
       password: hashedPassword,
+      profile_photo:
+        "https://icon-library.com/images/default-user-icon/default-user-icon-9.jpg",
     });
 
     return res.status(200).json({ message: "Hesabınız yaradıldı" });
@@ -111,5 +118,36 @@ router.get("/infoes", authenticateToken, async (req, res) => {
     return res.status(500).json({ message: err.message });
   }
 });
+
+router.put("/change-profile-photo", authenticateToken, async (req, res) => {
+  try {
+    const { imageUrl } = req.body;
+    const userId = req.data.user;
+
+    const user = await User.findOne(
+      { _id: userId },
+      " -transactionsHistory -password -__v -createdAt -updatedAt -contacts"
+    );
+
+    const cardsList = await cardModel.find({ userId }, "cardBalance -_id");
+    const totalBalance = cardsList.reduce(
+      (accumulator, currentCard) => accumulator + currentCard.cardBalance,
+      0
+    );
+
+    user.profile_photo = imageUrl;
+
+    await user.save();
+
+    return res.status(200).json({
+      message: "Profil şəkli uğurla dəyişdirildi",
+      data: { ...user._doc, totalBalance },
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+});
+
+router.post;
 
 export default router;

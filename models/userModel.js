@@ -106,6 +106,10 @@ const userSchema = mongoose.Schema(
       type: Number,
       default: 0,
     },
+    profile_photo: {
+      type: String,
+      
+    },
     contacts: [contactItem],
     incomeCategories: [earningCategoriesItem],
     outcomeCategories: [expenseCategoriesItem],

@@ -19,6 +19,13 @@ router.post("/send", authenticateToken, async (req, res) => {
     const senderId = req.data.user;
 
     const card = await Card.findOne({ _id: cardId });
+
+    if (card.limit.isActive) {
+      if (card.limit.amount + Number(amount) > card.limit.target) {
+        return res.status(400).json({ message: "Kart limiti aşır" });
+      }
+    }
+
     if (card.cardBalance < amount) {
       return res.status(400).json({ message: "Yetərsiz balans" });
     }
@@ -111,7 +118,7 @@ router.get("/get-history", authenticateToken, async (req, res) => {
 
     const userList = await userModel.find(
       { _id: { $in: idList } },
-      "email name surname"
+      "email name surname profile_photo"
     );
 
     const sortedUserList = idList.map((id) =>
@@ -131,6 +138,7 @@ router.get("/get-history", authenticateToken, async (req, res) => {
         title: transactionItem.title,
         email: userItem.email,
         sender: userItem.name + " " + userItem.surname,
+        profile_photo: userItem.profile_photo,
       });
     }
     return res.status(200).json({ data, total: totalCount[0].data });
@@ -196,6 +204,12 @@ router.put("/accept/:id/:cardId", authenticateToken, async (req, res) => {
           fromCard: item.fromCard,
         });
 
+        const senderCard = await cardModel.findOne({ _id: item.fromCard });
+        if (senderCard.limit.isActive) {
+          senderCard.limit.amount += Math.abs(item.amount);
+        }
+        await senderCard.save();
+
         transactionsList.transactions.splice(i, 1);
         //#endregion
       }
@@ -207,7 +221,6 @@ router.put("/accept/:id/:cardId", authenticateToken, async (req, res) => {
 
     return res.status(200).json({ message: "Qəbul edildi" });
   } catch (err) {
-    console.log(err);
     return res.status(500).json({ message: err.message });
   }
 });
@@ -272,7 +285,6 @@ router.put("/reject/:id", authenticateToken, async (req, res) => {
 
     return res.status(200).json({ message: "İmtina edildi" });
   } catch (err) {
-    console.log(err);
     return res.status(500).json({ message: err.message });
   }
 });
@@ -292,7 +304,7 @@ router.get("/get-pendings", authenticateToken, async (req, res) => {
 
     const userList = await userModel.find(
       { _id: { $in: idList } },
-      "email name surname"
+      "email name surname profile_photo"
     );
 
     const sortedUserList = idList.map((id) =>
@@ -313,6 +325,7 @@ router.get("/get-pendings", authenticateToken, async (req, res) => {
         title: transactionItem.title,
         email: userItem.email,
         sender: userItem.name + " " + userItem.surname,
+        profile_photo: userItem.profile_photo,
       });
     }
 
