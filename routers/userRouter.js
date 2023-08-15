@@ -3,10 +3,13 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
 import { authenticateToken } from "../utils/jwt.js";
-import { cloudinary } from "../utils/cloudinary.js";
 
 import User from "../models/userModel.js";
 import cardModel from "../models/cardModel.js";
+import temporaryUser from "../models/temporaryUser.js";
+import { sendMail } from "../emailConfig.js";
+import { MailTemplates } from "../constants/mailTemplates.js";
+import { UAParser } from "ua-parser-js";
 
 const router = express.Router();
 
@@ -22,10 +25,6 @@ router.post("/register", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // const imageUploadResult = await cloudinary.uploader.upload(image, {
-    //   folder: "profile_photos",
-    // });
-
     await User.create({
       name,
       surname,
@@ -35,7 +34,21 @@ router.post("/register", async (req, res) => {
         "https://icon-library.com/images/default-user-icon/default-user-icon-9.jpg",
     });
 
-    return res.status(200).json({ message: "Hesabınız yaradıldı" });
+    const OTP = Math.floor(100000 + Math.random() * 900000);
+
+    await temporaryUser.create({
+      email,
+      OTP,
+    });
+
+    const mailTemplate = new MailTemplates();
+    mailTemplate.setOTP(OTP);
+
+    sendMail(email, mailTemplate.getOtpMailTemplate());
+
+    return res
+      .status(200)
+      .json({ message: "Email ünvanınıza təsdiqləmə mesajı göndərildi" });
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
@@ -54,7 +67,14 @@ router.post("/login", async (req, res) => {
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
 
     if (!isPasswordCorrect) {
-      return res.status(400).json({ message: "Məlumat(lar) yanlışdır." });
+      return res.status(400).json({ message: "Məlumat yanlışdır." });
+    }
+
+    if (!user.verified) {
+      return res.status(403).json({
+        message: "Email ünvanınızı təsdiq edin",
+        data: { email: user.email },
+      });
     }
 
     const accessToken = jwt.sign({ user: user._id }, process.env.SECRET_KEY, {
@@ -105,7 +125,7 @@ router.get("/infoes", authenticateToken, async (req, res) => {
 
     const user = await User.findOne(
       { _id: userId },
-      "-_id -transactionsHistory -password -__v -createdAt -updatedAt -contacts"
+      "-transactionsHistory -password -__v -createdAt -updatedAt -contacts"
     );
 
     const cardsList = await cardModel.find({ userId }, "cardBalance -_id");
@@ -148,6 +168,144 @@ router.put("/change-profile-photo", authenticateToken, async (req, res) => {
   }
 });
 
-router.post;
+router.put("/verify", async (req, res) => {
+  try {
+    const { email, OTP } = req.body;
+
+    const temporaryUserItem = await temporaryUser.findOne({ email });
+
+    const isValidOTP = temporaryUserItem.OTP == OTP;
+
+    if (!isValidOTP) {
+      return res.status(400).json({ message: "OTP yanlışdır" });
+    }
+
+    await temporaryUserItem.deleteOne();
+
+    const user = await User.findOne({ email }, "verified");
+
+    user.verified = true;
+
+    await user.save();
+
+    return res.status(200).json({ message: "Email addresiniz təsdiq edildi" });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+});
+
+router.get("/validuser/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const isValid = await User.exists({ _id: id });
+
+    if (!isValid) {
+      return res.status(500).json({ message: "Xəta" });
+    }
+
+    return res.status(200).json({ data: true });
+  } catch (err) {
+    return res.status(500).json({ message: "Xəta" });
+  }
+});
+
+router.put("/reset-password", async (req, res) => {
+  try {
+    const { id, token, password } = req.body;
+
+    const userExist = await User.findOne(
+      { _id: id },
+      "forgotPasswordToken password"
+    );
+
+    if (!userExist) {
+      return res.status(404).json({ message: "Tapılmadı" });
+    }
+
+    const isValidToken = jwt.verify(
+      token,
+      process.env.SECRET_KEY,
+      (err, data) => {
+        if (err) {
+          if (err.name === "TokenExpiredError") {
+            return {
+              message: "Url vaxtı bitib",
+              status: false,
+            };
+          } else {
+            throw err;
+          }
+        }
+        return true;
+      }
+    );
+
+    const isTokenEqual = token == userExist.forgotPasswordToken;
+
+    if (isValidToken?.message) {
+      return res.status(400).json({ message: isValidToken.message });
+    }
+
+    if (!isTokenEqual) {
+      return res.status(400).json({ message: "Təsdiq edilmədi" });
+    }
+
+    const newPassword = await bcrypt.hash(password, 10);
+
+    userExist.password = newPassword;
+
+    await userExist.save();
+
+    return res.status(200).json({ message: "Şifrə yeniləndi" });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+});
+
+router.post("/send-recovery-email", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const userExist = await User.findOne({ email });
+
+    if (!userExist) {
+      return res.status(404).json({ message: "İstifadəçi tapılmadı" });
+    }
+
+    const token = jwt.sign({ _id: userExist._id }, process.env.SECRET_KEY, {
+      expiresIn: "3m",
+    });
+
+    userExist.forgotPasswordToken = token;
+
+    await userExist.save();
+
+    const recoveryUrl = `http://localhost:3000/reset-password/${userExist._id}/${token}`;
+
+    const mailTemplate = new MailTemplates();
+
+    const userAgent = req.headers["user-agent"];
+
+    const parser = new UAParser();
+    const result = parser.setUA(userAgent).getResult();
+
+    const operatingSystem = result.os.name;
+    const browserName = result.browser.name;
+
+    mailTemplate.setMainData({
+      userName: userExist.name + " " + userExist.surname,
+      browser_name: browserName,
+      operating_system: operatingSystem,
+      support_url: "http://localhost:3000",
+      action_url: recoveryUrl,
+    });
+
+    sendMail(email, mailTemplate.getRecoveryMailTemplate());
+
+    return res.status(200).json({ message: "Bərpa emaili göndərildi" });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+});
 
 export default router;

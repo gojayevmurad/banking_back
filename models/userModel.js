@@ -108,8 +108,16 @@ const userSchema = mongoose.Schema(
     },
     profile_photo: {
       type: String,
-      
     },
+    isOnline: {
+      type: Boolean,
+      default: false,
+    },
+    verified: {
+      type: Boolean,
+      default: false,
+    },
+    forgotPasswordToken: String,
     contacts: [contactItem],
     incomeCategories: [earningCategoriesItem],
     outcomeCategories: [expenseCategoriesItem],
@@ -119,3 +127,5 @@ const userSchema = mongoose.Schema(
 );
 
 export default mongoose.model("User", userSchema);
+// userName ,operating_system , browser_name , support_url,action_url
+//action_url browser_name operating_system action_url userName

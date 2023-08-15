@@ -1,6 +1,11 @@
 // socketHandler.js
 import { Server } from "socket.io";
 import { authenticateTokenSocket } from "./utils/jwt.js";
+import {
+  readMessage,
+  saveMessage,
+} from "./controllers/socket/chatController.js";
+import { changeStatus } from "./controllers/socket/userController.js";
 
 export const initializeSocketIO = (server) => {
   const io = new Server(server, {
@@ -24,13 +29,44 @@ export const initializeSocketIO = (server) => {
   io.on("connection", (socket) => {
     socket.join(socket.userId);
 
-    socket.on("send_message", (data) => {
-      const { message, recepientId } = data;
+    socket.on("send_message", async (data) => {
+      const { message, recipientId } = data;
+      try {
+        const savedMessage = await saveMessage(
+          socket.userId,
+          recipientId,
+          message
+        );
 
-      io.to(recepientId).emit("receive_message", {
-        message,
-        userId: socket.userId,
-      });
+        io.to(recipientId).emit("receive_message", {
+          message: savedMessage.content,
+          userId: socket.userId,
+        });
+
+        io.to(recipientId).emit("notification", {
+          message: savedMessage.content,
+          sender_photo: savedMessage.sender_photo,
+          sender: savedMessage.sender,
+        });
+      } catch (err) {
+        console.log("error", err);
+      }
+    });
+
+    socket.on("set_online", async () => {
+      await changeStatus(socket.userId, true);
+    });
+
+    socket.on("set_offline", async () => {
+      await changeStatus(socket.userId, false);
+    });
+
+    socket.on("readed", async (data) => {
+      const { connectionId } = data;
+
+      await readMessage(socket.userId, connectionId);
+
+      io.to(connectionId).emit("readed", { id: socket.userId });
     });
   });
 };
