@@ -98,4 +98,22 @@ router.put("/change-limit/:id", authenticateToken, async (req, res) => {
   }
 });
 
+router.post("/set-limit", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.data.user;
+
+    const { cardId, newLimit } = req.body;
+
+    const card = await Card.findOne({ _id: cardId, userId }, "limit");
+
+    card.limit.target = Number(newLimit);
+
+    await card.save();
+
+    return res.status(200).json({ message: "Limit dəyişdirildi" });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+});
+
 export default router;

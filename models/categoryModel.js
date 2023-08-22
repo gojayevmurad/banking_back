@@ -16,6 +16,7 @@ const categorySchema = mongoose.Schema({
   },
   target: {
     type: Number,
+    required: true,
   },
   amount: {
     type: Number,

@@ -168,6 +168,22 @@ router.put("/change-profile-photo", authenticateToken, async (req, res) => {
   }
 });
 
+router.put("/change-notification", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.data.user;
+
+    const user = await User.findOne({ _id: userId });
+
+    user.showNotification = !user.showNotification;
+
+    await user.save();
+
+    return res.status(200).json({ message: "Dəyişdirildi" });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+});
+
 router.put("/verify", async (req, res) => {
   try {
     const { email, OTP } = req.body;

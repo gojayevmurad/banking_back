@@ -149,81 +149,93 @@ router.get("/get-history", authenticateToken, async (req, res) => {
 
 // accept transaction
 
-router.put("/accept/:id/:cardId", authenticateToken, async (req, res) => {
-  try {
-    const userId = req.data.user;
-    const transactionId = req.params.id;
-    const cardId = req.params.cardId;
+router.put(
+  "/accept/:id/:cardId/:categoryId",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const userId = req.data.user;
+      const transactionId = req.params.id;
+      const cardId = req.params.cardId;
+      const categoryId = req.params.categoryId;
 
-    const transactionsList = await transactionModel.findOne(
-      { userId },
-      "transactions"
-    );
-    const user = await userModel.findOne(
-      { _id: userId },
-      "transactionsHistory"
-    );
-    const card = await cardModel.findOne({ _id: cardId });
+      const categoryItem = await categoryModel.findOne({
+        userId: userId,
+        _id: categoryId,
+      });
 
-    for (let i = 0; i < transactionsList.transactions.length; i++) {
-      let item = transactionsList.transactions[i];
-      if (item._id.toString() == transactionId) {
-        //#region update sender history
-        const sender = await userModel.findOne(
-          { _id: item.sender },
-          "transactionsHistory"
-        );
-        card.cardBalance += Math.abs(item.amount);
+      const transactionsList = await transactionModel.findOne(
+        { userId },
+        "transactions"
+      );
+      const user = await userModel.findOne(
+        { _id: userId },
+        "transactionsHistory"
+      );
+      const card = await cardModel.findOne({ _id: cardId });
 
-        for (let i = 0; i < sender.transactionsHistory.length; i++) {
-          const transaction = sender.transactionsHistory[i];
-          if (
-            transaction.transactionId.toString() ==
-            item.transactionId.toString()
-          ) {
-            if (transaction.categoryId != "null") {
-              const categoryItem = await categoryModel.findOne({
-                _id: transaction.categoryId,
-              });
-              categoryItem.amount += item.amount;
-              await categoryItem.save();
+      for (let i = 0; i < transactionsList.transactions.length; i++) {
+        let item = transactionsList.transactions[i];
+        if (item._id.toString() == transactionId) {
+          //#region update sender history
+          const sender = await userModel.findOne(
+            { _id: item.sender },
+            "transactionsHistory"
+          );
+          card.cardBalance += Math.abs(item.amount);
+
+          for (let i = 0; i < sender.transactionsHistory.length; i++) {
+            const transaction = sender.transactionsHistory[i];
+            if (
+              transaction.transactionId.toString() ==
+              item.transactionId.toString()
+            ) {
+              if (transaction.categoryId != "null") {
+                const categoryItem = await categoryModel.findOne({
+                  _id: transaction.categoryId,
+                });
+                categoryItem.amount += item.amount;
+                await categoryItem.save();
+              }
+              transaction.status = true;
             }
-            transaction.status = true;
           }
+          await sender.save();
+          //#endregion
+
+          //#region update user history
+          user.transactionsHistory.unshift({
+            userId: item.sender,
+            amount: item.amount,
+            status: true,
+            title: item.title,
+            transactionId,
+            fromCard: item.fromCard,
+          });
+
+          const senderCard = await cardModel.findOne({ _id: item.fromCard });
+          if (senderCard.limit.isActive) {
+            senderCard.limit.amount += Math.abs(item.amount);
+          }
+          await senderCard.save();
+
+          transactionsList.transactions.splice(i, 1);
+          //#endregion
+          categoryItem.amount += item.amount;
         }
-        await sender.save();
-        //#endregion
-
-        //#region update user history
-        user.transactionsHistory.unshift({
-          userId: item.sender,
-          amount: item.amount,
-          status: true,
-          title: item.title,
-          transactionId,
-          fromCard: item.fromCard,
-        });
-
-        const senderCard = await cardModel.findOne({ _id: item.fromCard });
-        if (senderCard.limit.isActive) {
-          senderCard.limit.amount += Math.abs(item.amount);
-        }
-        await senderCard.save();
-
-        transactionsList.transactions.splice(i, 1);
-        //#endregion
       }
+
+      await transactionsList.save();
+      await categoryItem.save();
+      await user.save();
+      await card.save();
+
+      return res.status(200).json({ message: "Qəbul edildi" });
+    } catch (err) {
+      return res.status(500).json({ message: err.message });
     }
-
-    await transactionsList.save();
-    await user.save();
-    await card.save();
-
-    return res.status(200).json({ message: "Qəbul edildi" });
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
   }
-});
+);
 
 router.put("/reject/:id", authenticateToken, async (req, res) => {
   try {

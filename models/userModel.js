@@ -109,6 +109,10 @@ const userSchema = mongoose.Schema(
     profile_photo: {
       type: String,
     },
+    showNotification: {
+      type: Boolean,
+      default: true,
+    },
     isOnline: {
       type: Boolean,
       default: false,
